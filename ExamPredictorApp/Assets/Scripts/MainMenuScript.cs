@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
+using System.Linq;
 
 public class MainMenuScript : MonoBehaviour {
 
@@ -15,20 +17,21 @@ public class MainMenuScript : MonoBehaviour {
 
     private void PopulateDropdownMenu()
     {
-        if (AppManager.subjectList == null)
+        string[] subjectList = Enum.GetNames(typeof(Subject));
+        if (subjectList == null)
         {
             Debug.LogWarning("In AppManager, Subject List is uninitialised (AppManager.subjectList)");
             subjectDropdown.AddOptions(new List<string> { "No Subjects" });
             return;
         }
 
-        if (AppManager.subjectList.Count == 0)
+        if (subjectList.Length == 0)
         {
             Debug.Log("Subject List in Appmanager is empty (AppManager.subjectList)");
             subjectDropdown.AddOptions(new List<string> {"No Subjects"});
             return;
         }
-        subjectDropdown.AddOptions(AppManager.subjectList);
+        subjectDropdown.AddOptions(subjectList.ToList<string>());
     }
 
     private void ClearDropdownMenu()
@@ -38,28 +41,30 @@ public class MainMenuScript : MonoBehaviour {
     
     private void PopulateParameterList()
     {
-        if (AppManager.parameterList == null)
+
+        string[] parameterList = Enum.GetNames(typeof(Parameter));
+        if (parameterList.Length == 0)
         {
             Debug.LogWarning("In AppManager, parameterList list variable is not initialised");
             return;
         }
 
-        if (AppManager.parameterValues == null)
+        if (AppManager.ParameterValues == null)
         {
             Debug.LogWarning("In AppManager, parameterValues list variable is not initialised");
             return;
         }
 
-        if (AppManager.parameterList.Count != AppManager.parameterValues.Count)
+        if (parameterList.Length != AppManager.ParameterValues.Count)
         {
             Debug.LogWarning("In Appmanager, the amount of parameters is not the same as the amount of values (parameterList != parameterValues).");
             return;
         }
 
-        for (int i = 0; i < AppManager.parameterList.Count; i++)
+        for (int i = 0; i < parameterList.Length; i++)
         {
             GameObject newListItem = Instantiate(listItemPrefab, listItemPanel.transform);
-            newListItem.GetComponentInChildren<TMP_Text>().SetText(AppManager.parameterList[i] + " " + AppManager.parameterValues[i].ToString());
+            newListItem.GetComponentInChildren<TMP_Text>().SetText(parameterList[i] + " " + AppManager.ParameterValues[i].ToString());
             itemPanelObjects.Add(newListItem);
         }
 
@@ -80,6 +85,5 @@ public class MainMenuScript : MonoBehaviour {
         PopulateDropdownMenu();
         ClearParameterList();
         PopulateParameterList();
-        ClearParameterList();
     }
 }
