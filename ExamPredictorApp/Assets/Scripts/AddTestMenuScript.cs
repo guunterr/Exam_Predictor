@@ -43,7 +43,7 @@ public class AddTestMenuScript : MonoBehaviour {
     private void CollectFormData()
     {
 
-        Test test = new Test();
+        //Test test = new Test();
     }
 
     public void OnEnable()
