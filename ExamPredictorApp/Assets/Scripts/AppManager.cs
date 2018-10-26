@@ -4,9 +4,12 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using MathNet.Numerics.LinearAlgebra;
+using System;
+using System.Linq;
 
 public enum Subject { English, Maths, Science, Latin, Spanish, Geography, History, Art, French, Mandarin, Computing }
 public enum Parameter { Sleep, Study, Tuition, SleepRange }
+public enum Grade {A, B, C, D, E, F, G}
 
 public class AppManager : MonoBehaviour {
 
@@ -18,8 +21,7 @@ public class AppManager : MonoBehaviour {
     const string FILE_TYPE = ".txt";
 
     public static List<float> ParameterValues = new List<float> { 8, 3, 1, 2 };
-    public static List<Test> ExistingTests = new List<Test>();
-
+    public List<Test> tests = new List<Test>(); 
     public TextAsset testFile;
 
     private void OnEnable()
@@ -30,19 +32,21 @@ public class AppManager : MonoBehaviour {
         List<Matrix<double>> derivatives = Network.CostFunctionPrime(Network.x, Network.y);
         Debug.Log("Symbolic dJdW1");
         Debug.Log(derivatives[0].ToString());
-        Debug.Log("Numerical dJdW1");
-        Debug.Log(Network.TestGradient1(Network.x, Network.y));
-        Debug.Log("Difference between symbolic and numeric dJdW1");
-        Debug.Log((derivatives[0] - Network.TestGradient1(Network.x, Network.y)).ToString());
         Debug.Log("Symbolic dJdW2");
         Debug.Log(derivatives[1].ToString());
-        Debug.Log("Numerical dJdW2");
-        Debug.Log(Network.TestGradient2(Network.x, Network.y));
         Debug.Log("Cost with randomly initialised variables");
         Debug.Log(Network.CostFunction(Network.x, Network.y).ToString());
 
         Trainer trainer = new Trainer(Network);
-        trainer.TrainNetwork(500);
+        trainer.TrainNetwork(100);
+
+        Debug.Log("Expected input behaviours to get an A");
+        Debug.Log(Network.ReversePropagation(Network.reverseInput));
+
+        Debug.Log("Symbolic dJdW1");
+        Debug.Log(derivatives[0].ToString());
+        Debug.Log("Symbolic dJdW2");
+        Debug.Log(derivatives[1].ToString());
     }
 
     private void OnDisable()
@@ -53,72 +57,50 @@ public class AppManager : MonoBehaviour {
 
     private void Start()
     {
-        LoadTests();
-        SaveTests();
-
+        //tests.Add(new Test( ((DateTime.UtcNow.Ticks/TimeSpan.TicksPerSecond).ToString() + ",3,3,5,4,6,2").Split(new[] { "," }, StringSplitOptions.None)));
+        //ReadTests();
+        //WriteTests();
     }
 
-    private void LoadTests()
+
+    public void ReadTests()
     {
-        /**StreamReader testreader;
-        try
+        string filetext = testFile.text;
+        string[] lines = filetext.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+        if (lines.Length == 0)
         {
-            testreader = new StreamReader(TEST_FILE_LOCATION);
+            return;
         }
-        catch
+        for (int i = 0; i < lines.Length - 1; i++)
         {
-            //TODO: Create file if file does not exist.
+            Debug.Log(lines[i]);
+            string[] parameters = lines[i].Split(new[] { "," }, StringSplitOptions.None);
+            if (parameters.Length == 7)
+            {
+                Debug.Log(parameters[0]);
+                tests.Add(new Test(parameters));
+            }
+            else
+            {
+                Debug.Log("Reading unsuitable text from file");
 
-            Debug.LogWarning("The reader has found no text file at: " + TEST_FILE_LOCATION);
-            testreader = null;
+            }
         }
 
-        //if (reader.ReadToEnd() == "")
-        //{
-        //    Debug.Log("Text file empty at " + TEST_FILE_LOCATION);
-        //}
-        //Read the text from directly from the test.txt file
-        Debug.Log("Text file: " + testreader.ReadLine());
-        testreader.Close();
-        **/
-
-        Debug.Log("File text: " + testFile.text);
+        tests = tests.Distinct().ToList();
     }
 
-
-    private void SaveTests()
+    public void WriteTests()
     {
-        StreamWriter testWriter;
+        tests = tests.Distinct().ToList();
 
-        testFile = Resources.Load<TextAsset>(FILE_NAME + FILE_TYPE) as TextAsset;
-
-        try
+        using (StreamWriter testWriter = new StreamWriter(TEST_FILE_LOCATION, true))
         {
-            testWriter = File.AppendText(FILE_PATH + FILE_NAME + FILE_TYPE);
-        }
-        catch
-        {
-            Debug.LogWarning("The writer has found no text file at: " + TEST_FILE_LOCATION);
-            testWriter = null;
+            for (int i = 0; i < tests.Count; i++)
+            {
+                testWriter.WriteLine(tests[i].GetParams());
+            }
         }
 
-        for (int i = 0; i < ExistingTests.Count; i++)
-        {
-            Debug.Log("Writing following line to test file " + ExistingTests[i].GetAttributes());
-            testWriter.WriteLine(ExistingTests[i].GetAttributes());
-        }
-        testWriter.WriteLine("Lorem Ipsum is boring and awful");
-        testWriter.Close();
     }
-
-    public void AddTest(Test test)
-    {
-        ExistingTests.Add(test);
-    }
-
-    public void RemoveTest(Test test)
-    {
-        ExistingTests.Remove(test);
-    }
-
 }

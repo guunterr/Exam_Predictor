@@ -1,48 +1,72 @@
-﻿using System;
+﻿using MathNet.Numerics;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
 public class Test{
-    //TODO :remove scriptable object inheritance for release, chenga public to public readonly and create a contructor
-    public int id;
-    public float score;
+    public long id;
+    public Grade score;
     public float hoursSleep;
     public float hoursStudy;
-    public float hoursTutition;
+    public float hoursTuition;
     public float sleepRange;
     public Subject subject;
 
     public Test()
     {
         id = 0;
-        score = 50;
+        score = Grade.A;
         hoursSleep = 8;
         hoursStudy = 3;
-        hoursTutition = 1;
+        hoursTuition = 1;
         sleepRange = 3;
         subject = Subject.Computing;
     }
 
-    public Test(int _id, float _score, float _hoursSleep, float _hoursStudy, float _hoursTuition, float _sleepRange, Subject _subject)
+    public Test(long _id, Grade _score, float _hoursSleep, float _hoursStudy, float _hoursTuition, float _sleepRange, Subject _subject)
     {
         id = _id;
         score = _score;
         hoursSleep = _hoursSleep;
-        hoursTutition = _hoursTuition;
+        hoursTuition = _hoursTuition;
         hoursStudy = _hoursStudy;
         sleepRange = _sleepRange;
         subject = _subject;
     }
 
-    public string GetAttributes()
+    public Test(string[] parameters)
     {
-        return (id.ToString() + "," + 
-            score.ToString() + "," + 
-            hoursSleep.ToString() + "," + 
-            hoursStudy.ToString() + "," + 
-            hoursTutition.ToString() + "," + 
-            sleepRange.ToString() + "," + 
-            subject.ToString());
+        id = long.Parse(parameters[0]);
+        score = (Grade)int.Parse(parameters[1]);
+        hoursSleep = float.Parse(parameters[2]);
+        hoursStudy = float.Parse(parameters[3]);
+        hoursTuition = float.Parse(parameters[4]);
+        sleepRange = float.Parse(parameters[5]);
+        subject = (Subject)int.Parse(parameters[6]);
+    }
+
+    public string GetParams()
+    {
+        return id.ToString() + ","
+            + ((int)score).ToString() + ","
+            + hoursSleep.ToString() + ","
+            + hoursStudy.ToString() + ","
+            + hoursTuition.ToString() + ","
+            + sleepRange.ToString() + ","
+            + ((int)subject).ToString();
+    }
+
+    public bool Equals(Test other)
+    {
+        if (other == null) return false;
+        if (score != other.score) return false;
+        if (hoursSleep != other.hoursSleep) return false;
+        if (hoursStudy != other.hoursStudy) return false;
+        if (hoursTuition != other.hoursTuition) return false;
+        if (sleepRange != other.sleepRange) return false;
+        if (subject != other.subject) return false;
+        return true;
     }
 }

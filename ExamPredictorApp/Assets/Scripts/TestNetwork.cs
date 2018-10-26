@@ -1,5 +1,7 @@
 ﻿using MathNet.Numerics;
+using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.Statistics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,23 +40,41 @@ public class TestNetwork {
     //Training data to measure overfitting
     public Matrix<double> testinput;
     public Matrix<double> testoutput;
+
+    public Matrix<double> reverseInput;
     //Rate at which corrections are made to the network - this needs to be tuned by trial and error without Quasi-Newton Algorithms
     public double learningRate;
 
     public TestNetwork()
     {
+
+        var V = Vector<double>.Build;
         //Network parameters - can be fiddled with at any time
         numExamples = 6;
         inputLayerSize = 4;
         hiddenLayerSize = 12;
-        outputLayerSize = 8;
+        outputLayerSize = 1;
         learningRate = 0.05;
+        reverseInput = Matrix<double>.Build.Dense(1, outputLayerSize);
+        reverseInput[0, 0] = 1;
 
         //Initialising random weights and training data for testing
         weight1 = Matrix<double>.Build.Random(inputLayerSize, hiddenLayerSize);
         weight2 = Matrix<double>.Build.Random(hiddenLayerSize, outputLayerSize);
-        x = Matrix<double>.Build.Random(numExamples, inputLayerSize);
-        y = Matrix<double>.Build.Random(numExamples, outputLayerSize);
+        //Distribute Sleep, Study time etc as they are expected to be distributed (normally with different means and standard deviations
+        //Based on consultation with focus group.
+        //Normalised variables (X-mu)/sigma
+        x = Matrix<double>.Build.DenseOfColumnVectors((V.Random(6, Normal.WithMeanStdDev(8, 1)) - 6)/1,
+            (V.Random(6, Normal.WithMeanStdDev(3, 0.6))-3)/0.6,
+            (V.Random(6, Normal.WithMeanStdDev(1, 0.3))-1)/0.3,
+            (V.Random(6, Normal.WithMeanStdDev(6, 1))-6)/1);
+        //x = x / x.Enumerate().Maximum();
+        y = Matrix<double>.Build.Dense(numExamples, outputLayerSize);
+        System.Random rnd = new System.Random();
+        for (int i = 0; i < numExamples; i++)
+        {
+            y[i, rnd.Next(1, 6)] = 1;
+        }
 
         //Prints matrices to the log in order to test them
         Debug.Log("Weight 1");
@@ -76,12 +96,12 @@ public class TestNetwork {
         //Debug.Log("Hidden Layer before and after activation function respectively:");
         hiddenLayer = input.Multiply(weight1);
         //Debug.Log(hiddenLayer.ToString());
-        hiddenLayerActivation = hiddenLayer.Map(Sigmoid);
+        hiddenLayerActivation = hiddenLayer.Map(Activation);
         //Debug.Log(hiddenLayerActivation.ToString());
         //Debug.Log("Output layer before activation function:");
         outputLayer = hiddenLayerActivation.Multiply(weight2);
         //Debug.Log(outputLayer.ToString());
-        outputLayerActivation = outputLayer.Map(Sigmoid);
+        outputLayerActivation = outputLayer.Map(Activation);
         //Debug.Log("Output of forward propagation function:");
         //Debug.Log(outputLayerActivation.ToString());
 
@@ -97,19 +117,19 @@ public class TestNetwork {
         //Debug.Log("Hidden Layer before and after activation function respectively:");
         hiddenLayer = input.Multiply(weightmatrix1);
         //Debug.Log(hiddenLayer.ToString());
-        hiddenLayerActivation = hiddenLayer.Map(Sigmoid);
+        hiddenLayerActivation = hiddenLayer.Map(Activation);
         //Debug.Log(hiddenLayerActivation.ToString());
         //Debug.Log("Output layer before activation function:");
         outputLayer = hiddenLayerActivation.Multiply(weightmatrix2);
         //Debug.Log(outputLayer.ToString());
-        outputLayerActivation = outputLayer.Map(Sigmoid);
+        outputLayerActivation = outputLayer.Map(Activation);
         //Debug.Log("Output of forward propagation function:");
         //Debug.Log(outputLayerActivation.ToString());
 
         return outputLayerActivation;
     }
 
-    public double Sigmoid(double z)
+    public double Activation(double z)
     {
         //Sigmoid logstic function. To be applied pointwise to matrix
         return 1 / (1 + Math.Exp(-z));
@@ -121,11 +141,16 @@ public class TestNetwork {
         return Math.Pow(z, 2);
     }
 
-    public double SigmoidPrime(double z)
+    public double ActivationPrime(double z)
     {
         //Sigmoid derivative - e^-x/(1+e^-x)^2
         //Used for calculating partial derivative of costs with respect to weights.
         return Math.Exp(-z)/Square(1d+Math.Exp(-z));
+    }
+
+    public double Mod(double z)
+    {
+        return Math.Abs(z);
     }
 
     public double CostFunction(Matrix<double> input, Matrix<double> expectedOutput)
@@ -182,13 +207,13 @@ public class TestNetwork {
         Matrix<double> yHat = Forward(input);
         //Backpropagation of the error. First apply power rule to cost function,
         //Then multiply by the derivative of the sigmoid function to find the derivative of y hat with respect to the output layer activation
-        Matrix<double> delta3 = -(expectedOutput - yHat).PointwiseMultiply(outputLayer.Map(SigmoidPrime));
+        Matrix<double> delta3 = -(expectedOutput - yHat).PointwiseMultiply(outputLayer.Map(ActivationPrime));
         //Finally multiply by the activation of the hidden layer in order to 'assign blame' for the error.
         Matrix<double> dJdW2 = hiddenLayerActivation.Transpose().Multiply(delta3);
         //Debug.Log("dJ/dW2");
         //Debug.Log(dJdW2.ToString());
         //Continue the chain rule. This time backpropagate the weight errors to the hidden layer, and then multiply by the input matrix to 'assign blame'
-        Matrix<double> delta2 = delta3.Multiply(weight2.Transpose()).PointwiseMultiply(hiddenLayer.Map(SigmoidPrime));
+        Matrix<double> delta2 = delta3.Multiply(weight2.Transpose()).PointwiseMultiply(hiddenLayer.Map(ActivationPrime));
         Matrix<double> dJdW1 = input.Transpose().Multiply(delta2);
         //Debug.Log("dJ/dW1");
         //Debug.Log(dJdW1.ToString());
@@ -222,8 +247,8 @@ public class TestNetwork {
         Matrix<double> weightmatrix = Matrix<double>.Build.DenseOfIndexed(inputLayerSize, hiddenLayerSize, weightenum);
         // Test to see whether those two are the same, because if they aren't then it's a big problem
 
-        Debug.Log("weightmatrix - weight1, all good if a bunch of zeros else we are in trouble");
-        Debug.Log((weightmatrix - weight1).ToString());
+        //Debug.Log("weightmatrix - weight1, all good if a bunch of zeros else we are in trouble");
+        //Debug.Log((weightmatrix - weight1).ToString());
 
         double cost1, cost2;
 
@@ -295,4 +320,12 @@ public class TestNetwork {
         weight2 = weight2 - learningRate * derivatives[1];
     }
 
+    public Matrix<double> ReversePropagation(Matrix<double> result)
+    {
+        Matrix<double> middleLayer = result.Multiply(weight2.Transpose());
+        Matrix<double> projectedInput = middleLayer.Multiply(weight1.Transpose());
+
+        return projectedInput;
+
+    }
 }
