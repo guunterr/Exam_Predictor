@@ -39,7 +39,7 @@ public class MainMenuScript : MonoBehaviour {
         subjectDropdown.ClearOptions();
     }
     
-    private void PopulateParameterList()
+    public void PopulateParameterList()
     {
 
         string[] parameterList = Enum.GetNames(typeof(Parameter));
@@ -70,6 +70,16 @@ public class MainMenuScript : MonoBehaviour {
 
     }
 
+    IEnumerator UpdateParams()
+    {
+        while (true)
+        {
+            ClearParameterList();
+            PopulateParameterList();
+            yield return new WaitForSeconds(5f);
+        }
+    }
+
     private void ClearParameterList()
     {
         for (int i = 0; i < itemPanelObjects.Count; i++)
@@ -83,7 +93,6 @@ public class MainMenuScript : MonoBehaviour {
     {
         ClearDropdownMenu();
         PopulateDropdownMenu();
-        ClearParameterList();
-        PopulateParameterList();
+        StartCoroutine("UpdateParams");
     }
 }

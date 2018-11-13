@@ -20,7 +20,7 @@ public class AppManager : MonoBehaviour {
     const string FILE_PATH = "Assets/Resources/";
     const string FILE_TYPE = ".txt";
 
-    public static List<float> ParameterValues = new List<float> { 8, 3, 1, 2 };
+    public static List<double> ParameterValues = new List<double> { 0, 0, 0, 0 };
     public List<Test> tests = new List<Test>(); 
     public TextAsset testFile;
 
@@ -28,25 +28,21 @@ public class AppManager : MonoBehaviour {
     {
         //TODO: Subscribe to appropriate events
         //For example AppEventManager.thisdelegate += function;
+        //Initiialises the network and trainer
         TestNetwork Network = new TestNetwork();
-        List<Matrix<double>> derivatives = Network.CostFunctionPrime(Network.x, Network.y);
-        Debug.Log("Symbolic dJdW1");
-        Debug.Log(derivatives[0].ToString());
-        Debug.Log("Symbolic dJdW2");
-        Debug.Log(derivatives[1].ToString());
-        Debug.Log("Cost with randomly initialised variables");
-        Debug.Log(Network.CostFunction(Network.x, Network.y).ToString());
-
+        //Trains the network
         Trainer trainer = new Trainer(Network);
-        trainer.TrainNetwork(100);
-
+        trainer.TrainNetwork(500);
+        //Recieves expected input behaviours.
+        //Network.reverseInput is the vector that corresponds to an A or A* (The highest grade)
         Debug.Log("Expected input behaviours to get an A");
-        Debug.Log(Network.ReversePropagation(Network.reverseInput));
-
-        Debug.Log("Symbolic dJdW1");
-        Debug.Log(derivatives[0].ToString());
-        Debug.Log("Symbolic dJdW2");
-        Debug.Log(derivatives[1].ToString());
+        Matrix<double> recommendations = Network.ReturnRecommendations(Network.reverseInput);
+        Debug.Log(recommendations);
+        //Sets parameter value list to recommendations, then update will be called in the main menu script
+        for (int i = 0; i < recommendations.ColumnCount; i++)
+        {
+            ParameterValues[i] = Math.Round(recommendations[0, i], 1);
+        }
     }
 
     private void OnDisable()
@@ -89,6 +85,8 @@ public class AppManager : MonoBehaviour {
 
         tests = tests.Distinct().ToList();
     }
+
+
 
     public void WriteTests()
     {
